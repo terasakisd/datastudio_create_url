@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>【SD】Data Studio構築URL制作ツール</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --surface: #fff;
+    --border: #e4e4e7;
+    --text: #18181b;
+    --muted: #71717a;
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --accent-bg: #eff6ff;
+    --highlight: #fef3c7;
+    --radius: 6px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Segoe UI", sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .mono { font-family: "SFMono-Regular", Consolas, Menlo, monospace; }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 10;
+  }
+  header h1 { margin: 0; font-size: 18px; }
+
+  .howto {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 24px 0;
+  }
+  .howto .card { padding: 20px 24px; }
+  .howto-bottom { padding: 0 24px 24px; }
+  .howto-sub {
+    margin: 20px 0 16px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  .howto a { color: var(--primary); }
+  .howto-note {
+    margin: 12px 0 0 42px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+  }
+  .howto ol {
+    margin: 0; padding: 0;
+    list-style: none;
+    counter-reset: step;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .howto li {
+    counter-increment: step;
+    display: flex; gap: 14px; align-items: flex-start;
+    font-size: 14px; line-height: 1.7;
+  }
+  .howto li::before {
+    content: counter(step);
+    flex: none;
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--accent-bg); color: var(--primary);
+    border-radius: 50%; font-weight: 600; font-size: 14px;
+  }
+
+  main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .card + .card { margin-top: 20px; }
+  .card[hidden] + .card { margin-top: 0; }
+  .card h3 {
+    margin: 0 0 12px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+
+  .field { margin-bottom: 12px; }
+  .field:last-child { margin-bottom: 0; }
+  label { display: block; font-size: 13px; margin-bottom: 4px; }
+
+  input[type=text], select, textarea {
+    width: 100%;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    font-family: inherit;
+  }
+  input[type=text], textarea { font-family: "SFMono-Regular", Consolas, Menlo, monospace; font-size: 13px; }
+  textarea { line-height: 1.8; resize: vertical; min-height: 110px; }
+  input:focus, select:focus, textarea:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: -1px;
+    border-color: var(--primary);
+  }
+  input::placeholder, textarea::placeholder { color: #a1a1aa; }
+
+  select {
+    padding-right: 32px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 10px 7px;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+  }
+
+  .prefix-input { display: flex; align-items: stretch; }
+  .prefix-input .tag {
+    display: flex; align-items: center;
+    font-family: "SFMono-Regular", Consolas, Menlo, monospace; font-size: 13px;
+    background: var(--bg); border: 1px solid var(--border); border-right: none;
+    border-radius: var(--radius) 0 0 var(--radius); padding: 0 10px; color: var(--muted); white-space: nowrap;
+  }
+  .prefix-input .tag + input { border-radius: 0 var(--radius) var(--radius) 0; }
+  .prefix-input.no-tag .tag { display: none; }
+  .prefix-input.no-tag input { border-radius: var(--radius); }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 520px) { .row2 { grid-template-columns: 1fr; } }
+
+  .sticky { position: sticky; top: 72px; }
+  @media (max-width: 900px) { .sticky { position: static; } }
+
+  .out-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .out-head h3 { margin: 0; }
+
+  .params {
+    font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+    font-size: 12.5px; line-height: 1.6;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+  }
+  .param { word-break: break-all; }
+  .param .k { color: var(--muted); }
+  .param .v { color: var(--text); }
+  .param .enc { color: var(--primary); }
+  .param.muted { opacity: 0.4; }
+
+  .actions { display: flex; gap: 8px; margin-top: 12px; }
+
+  .btn {
+    padding: 8px 14px; border-radius: var(--radius); cursor: pointer;
+    font-size: 13px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text);
+    font-family: inherit; text-decoration: none;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .btn:hover { background: var(--accent-bg); }
+  .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .btn-primary:hover { background: var(--primary-hover); }
+  .btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+
+  .msg {
+    font-size: 12.5px; line-height: 1.6;
+    border-radius: var(--radius); padding: 8px 12px; margin-top: 12px;
+    background: var(--highlight); border: 1px solid #fde68a; color: #92400e;
+    display: flex; gap: 8px;
+  }
+  .msg b { font-weight: 600; }
+
+  .bulk-out {
+    margin-top: 12px;
+    max-height: 360px;
+    overflow-y: auto;
+    padding-right: 10px;
+    scrollbar-width: thin;
+  }
+  .bulk-out::-webkit-scrollbar { width: 6px; }
+  .bulk-out::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+  .bulk-out::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+  .bulk-row {
+    display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 10px 12px; margin-bottom: 8px; background: var(--surface);
+  }
+  .bulk-row .name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .bulk-row .u {
+    font-family: "SFMono-Regular", Consolas, Menlo, monospace; font-size: 11px; color: var(--muted);
+    word-break: break-all; line-height: 1.5;
+  }
+  .bulk-row .go { display: flex; gap: 6px; }
+  .icon-btn {
+    font-family: inherit; font-size: 12px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    border-radius: var(--radius); padding: 5px 10px; cursor: pointer; white-space: nowrap;
+    text-decoration: none; display: inline-flex; align-items: center;
+  }
+  .icon-btn:hover { background: var(--accent-bg); }
+
+  .empty {
+    font-size: 13px; color: var(--muted);
+    border: 1px dashed var(--border); border-radius: var(--radius);
+    padding: 16px; text-align: center;
+  }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(12px);
+    background: var(--text); color: #fff; font-size: 13px;
+    padding: 10px 18px; border-radius: var(--radius); opacity: 0; pointer-events: none;
+    transition: opacity .18s, transform .18s; z-index: 50;
+  }
+  .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>【SD】Data Studio構築URL制作ツール</h1>
+</header>
+
+<div class="howto">
+  <section class="card">
+    <ol>
+      <li>シークレットモードで <a href="https://search.google.com/search-console" target="_blank" rel="noopener">Search Console</a> を開く。</li>
+      <li>対象のサイトの Google アカウントでログインする。</li>
+      <li>Search Console で表示されるプロパティのURL（またはドメイン）を確認する。<a href="https://gyazo.com/7fe45a6f191eec6006d6f1ed5af6c6a3" target="_blank" rel="noopener">画像1</a></li>
+      <li>「対象サイト → URL（またはドメイン）」にペーストする。</li>
+      <li>URLをコピーしてURL欄に貼り付ける、または「Data Studioで開く」を押す。</li>
+    </ol>
+  </section>
+</div>
+
+<main>
+
+  <!-- ================= 左：入力 ================= -->
+  <div>
+    <section class="card" hidden>
+      <h3>テンプレート</h3>
+      <div class="field">
+        <label for="reportId">レポートID</label>
+        <input type="text" id="reportId" value="966aad9f-5852-4a57-8088-16d1a65f5a8a" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="alias">データソースエイリアス</label>
+        <input type="text" id="alias" value="ds3" spellcheck="false">
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>対象サイト</h3>
+      <div class="field">
+        <label for="site" id="siteLabel">URL（またはドメイン）</label>
+        <div class="prefix-input no-tag" id="siteWrap">
+          <span class="tag" id="siteTag">sc-domain:</span>
+          <input type="text" id="site" placeholder="https://example.co.jp/" spellcheck="false">
+        </div>
+      </div>
+      <div class="field">
+        <label for="reportName">レポート名</label>
+        <input type="text" id="reportName" value="クエリ前後比較「{site}」" spellcheck="false">
+      </div>
+    </section>
+
+    <section class="card" hidden>
+      <h3>データ設定</h3>
+      <div class="row2">
+        <div class="field">
+          <label for="tableType">テーブルの種類</label>
+          <select id="tableType">
+            <option value="URL_IMPRESSION">URL_IMPRESSION（ページ単位）</option>
+            <option value="SITE_IMPRESSION">SITE_IMPRESSION（クエリ単位）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="searchType">検索タイプ</label>
+          <select id="searchType">
+            <option value="WEB">WEB</option>
+            <option value="IMAGE">IMAGE</option>
+            <option value="VIDEO">VIDEO</option>
+            <option value="NEWS">NEWS</option>
+            <option value="DISCOVER">DISCOVER</option>
+            <option value="GOOGLE_NEWS">GOOGLE_NEWS</option>
+          </select>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ================= 右：出力 ================= -->
+  <div class="sticky">
+    <section class="card">
+      <div class="out-head">
+        <h3>生成されたURL</h3>
+      </div>
+      <div class="params" id="params"></div>
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="copyBtn">URLをコピー</button>
+        <a class="btn" id="openBtn" target="_blank" rel="noopener">Data Studioで開く</a>
+      </div>
+      <div id="notices"></div>
+    </section>
+
+    <section class="card">
+      <h3>複数サイトを一括生成</h3>
+      <div class="field">
+        <label for="bulkIn">サイト一覧（1行に1サイト）</label>
+        <textarea id="bulkIn" spellcheck="false" placeholder="https://example.co.jp/
+https://example.com/service/
+another-site.jp"></textarea>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="bulkBtn">一覧を生成</button>
+        <button type="button" class="btn" id="bulkCopyBtn">全部まとめてコピー</button>
+      </div>
+      <div class="bulk-out" id="bulkOut">
+        <div class="empty">サイトを入力して「一覧を生成」を押すと、ここにURLが並びます。</div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div class="howto howto-bottom">
+  <section class="card">
+    <ol style="counter-reset: step 5;">
+      <li>「編集して共有」→「確認して保存」を押す。<a href="https://gyazo.com/ab6dbf1941a204c2b7d175044f1864fe" target="_blank" rel="noopener">画像2</a>｜<a href="https://gyazo.com/4c79a390e8cb83f85f4316c3e45581b6" target="_blank" rel="noopener">画像3</a></li>
+      <li>共有設定を公開にする。<a href="https://gyazo.com/aca1c6b05dc0a292f073a35353fbf06b" target="_blank" rel="noopener">画像4</a></li>
+    </ol>
+    <p class="howto-sub">フィルタをかける場合（共通スラッグなど）</p>
+    <ol style="counter-reset: step 8;">
+      <li>編集画面でフィルタをかけたい表を選択する。<a href="https://gyazo.com/6f70d3ae21c4c917c9511e95886ab3e0" target="_blank" rel="noopener">画像5</a></li>
+      <li>「データソースを編集」を押す。<a href="https://gyazo.com/b28ff24b131f6a4fde43ae009f883151" target="_blank" rel="noopener">画像6</a></li>
+      <li>フィルターの設定を済ませる。<a href="https://gyazo.com/bc3260bca668fa235987a5060fa61fd0" target="_blank" rel="noopener">画像7</a></li>
+    </ol>
+    <div class="howto-note">
+      例）「一致条件」で、「Landing page」に「含む」を選択、値を「column」にする。<br>
+      → URLにcolumnが含まれたものしか含まれなくなる
+    </div>
+    <ol style="counter-reset: step 11; margin-top: 16px;">
+      <li><a href="https://docs.google.com/spreadsheets/d/1jzPr_0ch81ldrT5vIL6PKgSzizvaHiVkO2Z7lDLJgmo/edit?usp=sharing" target="_blank" rel="noopener">Data Studio管理シート</a>にサイト名、URL、種類、ridを記入する。</li>
+    </ol>
+  </section>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  var BASE = "https://lookerstudio.google.com/reporting/create";
+  var mode = "prefix"; // prefix | domain
+
+  var el = function(id){ return document.getElementById(id); };
+  var reportId  = el("reportId"),
+      alias     = el("alias"),
+      site      = el("site"),
+      reportName= el("reportName"),
+      tableType = el("tableType"),
+      searchType= el("searchType"),
+      params    = el("params"),
+      notices   = el("notices"),
+      copyBtn   = el("copyBtn"),
+      openBtn   = el("openBtn"),
+      siteWrap  = el("siteWrap"),
+      siteLabel = el("siteLabel"),
+      bulkIn    = el("bulkIn"),
+      bulkOut   = el("bulkOut"),
+      toast     = el("toast");
+
+  var lastBulk = [];
+
+  function esc(s){
+    return String(s).replace(/[&<>"]/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];
+    });
+  }
+
+  // %XX を強調表示する
+  function markEncoded(encoded){
+    return esc(encoded).replace(/%[0-9A-Fa-f]{2}/g, function(m){
+      return '<span class="enc">' + m + '</span>';
+    });
+  }
+
+  // 区切りとして誤読される文字だけを変換する（: / 日本語はそのまま）
+  function softEncode(s){
+    return String(s)
+      .replace(/%/g, "%25")
+      .replace(/&/g, "%26")
+      .replace(/#/g, "%23")
+      .replace(/\?/g, "%3F")
+      .replace(/=/g, "%3D")
+      .replace(/\+/g, "%2B")
+      .replace(/ /g, "%20");
+  }
+
+  function encodeValue(s){
+    return softEncode(s);
+  }
+
+  // 入力値を掃除して siteUrl の生の値を作る
+  function buildSiteValue(raw, m){
+    var v = String(raw || "").trim();
+    if(!v) return "";
+    if(m === "domain"){
+      v = v.replace(/^sc-domain:\s*/i, "");
+      v = v.replace(/^https?:\/\//i, "");
+      v = v.replace(/\/.*$/, "");     // パスを落とす
+      return v ? "sc-domain:" + v : "";
+    }
+    return v.replace(/^sc-domain:\s*/i, "");
+  }
+
+  // 表示用のサイト名（{site} 置換に使う）
+  function siteLabelOf(raw){
+    return String(raw || "").trim()
+      .replace(/^sc-domain:\s*/i, "")
+      .replace(/^https?:\/\//i, "")
+      .replace(/\/+$/, "");
+  }
+
+  function buildParts(rawSite, m){
+    var a = (alias.value || "").trim() || "ds0";
+    var siteVal = buildSiteValue(rawSite, m);
+    var name = (reportName.value || "").replace(/\{site\}/g, siteLabelOf(rawSite)).trim();
+
+    var list = [
+      { k:"c.reportId",              raw:(reportId.value||"").trim() },
+      { k:"r.reportName",            raw:name, optional:true },
+      { k:"ds."+a+".connector",      raw:"searchConsole" },
+      { k:"ds."+a+".siteUrl",        raw:siteVal },
+      { k:"ds."+a+".tableType",      raw:tableType.value },
+      { k:"ds."+a+".searchType",     raw:searchType.value }
+    ];
+    return list.map(function(p){
+      p.enc = encodeValue(p.raw);
+      return p;
+    });
+  }
+
+  function urlFrom(parts){
+    var q = parts.filter(function(p){ return p.raw !== ""; })
+                 .map(function(p){ return p.k + "=" + p.enc; })
+                 .join("&");
+    return BASE + "?" + q;
+  }
+
+  function render(){
+    var parts = buildParts(site.value, mode);
+    var url = urlFrom(parts);
+
+    var html = '<div class="param"><span class="v">' + esc(BASE) + '</span></div>';
+    var first = true;
+    parts.forEach(function(p){
+      var empty = p.raw === "";
+      if(empty && !p.optional){
+        html += '<div class="param muted"><span class="k">' + (first?"?":"&") + esc(p.k) + '=</span><span class="v">—</span></div>';
+        first = false;
+        return;
+      }
+      if(empty) return;
+      html += '<div class="param"><span class="k">' + (first?"?":"&") + esc(p.k) + '=</span>' +
+              '<span class="v">' + markEncoded(p.enc) + '</span></div>';
+      first = false;
+    });
+    params.innerHTML = html;
+
+    var ready = parts.every(function(p){ return p.optional || p.raw !== ""; });
+    openBtn.href = ready ? url : "#";
+    openBtn.setAttribute("aria-disabled", ready ? "false" : "true");
+    copyBtn.setAttribute("aria-disabled", ready ? "false" : "true");
+    copyBtn.dataset.url = ready ? url : "";
+
+    renderNotices();
+  }
+
+  function renderNotices(){
+    var raw = site.value.trim();
+    var out = "";
+    if(mode === "domain" && /\//.test(raw.replace(/^https?:\/\//i,""))){
+      out += '<div class="msg"><span>⚠</span><span>ドメインプロパティにパスは指定できません。パス部分を除いて <b class="mono">' +
+             esc(buildSiteValue(raw,"domain")) + '</b> として組み立てています。</span></div>';
+    }
+    notices.innerHTML = out;
+  }
+
+  function setMode(m){
+    mode = m;
+    if(m === "domain"){
+      siteWrap.classList.remove("no-tag");
+    }else{
+      siteWrap.classList.add("no-tag");
+    }
+    render();
+  }
+
+  function showToast(t){
+    toast.textContent = t;
+    toast.classList.add("on");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function(){ toast.classList.remove("on"); }, 1900);
+  }
+
+  function copyText(text, done){
+    if(navigator.clipboard && window.isSecureContext){
+      navigator.clipboard.writeText(text).then(done, function(){ fallback(text, done); });
+    }else{
+      fallback(text, done);
+    }
+  }
+  function fallback(text, done){
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try{ document.execCommand("copy"); done(); }
+    catch(e){ showToast("コピーできませんでした"); }
+    document.body.removeChild(ta);
+  }
+
+  // 入力内容からモードを自動判定する（http(s):// あり → プレフィックス、なし → ドメイン）
+  function autoMode(){
+    var v = site.value.trim();
+    if(!v){ render(); return; }
+    var m = /^https?:\/\//i.test(v) ? "prefix" : "domain";
+    if(m !== mode){ setMode(m); } else { render(); }
+  }
+
+  // ---- events ----
+  [reportId, alias, reportName].forEach(function(n){ n.addEventListener("input", render); });
+  site.addEventListener("input", autoMode);
+  [tableType, searchType].forEach(function(n){ n.addEventListener("change", render); });
+
+  copyBtn.addEventListener("click", function(){
+    var u = copyBtn.dataset.url;
+    if(!u){ showToast("入力が足りません"); return; }
+    copyText(u, function(){
+      copyBtn.textContent = "コピーしました";
+      setTimeout(function(){ copyBtn.textContent = "URLをコピー"; }, 1600);
+    });
+  });
+
+  el("bulkBtn").addEventListener("click", function(){
+    var lines = bulkIn.value.split("\n").map(function(s){ return s.trim(); }).filter(Boolean);
+    if(!lines.length){
+      bulkOut.innerHTML = '<div class="empty">サイトが1件も入力されていません。</div>';
+      lastBulk = [];
+      return;
+    }
+    lastBulk = lines.map(function(line){
+      var m = /^https?:\/\//i.test(line) ? "prefix" : "domain";
+      var parts = buildParts(line, m);
+      return { label: siteLabelOf(line), url: urlFrom(parts) };
+    });
+    bulkOut.innerHTML = lastBulk.map(function(r, i){
+      return '<div class="bulk-row">' +
+               '<div><div class="name">' + esc(r.label) + '</div><div class="u">' + esc(r.url) + '</div></div>' +
+               '<div class="go">' +
+                 '<button type="button" class="icon-btn" data-i="' + i + '">コピー</button>' +
+                 '<a class="icon-btn" href="' + esc(r.url) + '" target="_blank" rel="noopener">開く</a>' +
+               '</div>' +
+             '</div>';
+    }).join("");
+  });
+
+  bulkOut.addEventListener("click", function(e){
+    var b = e.target.closest("button[data-i]");
+    if(!b) return;
+    var r = lastBulk[+b.dataset.i];
+    if(!r) return;
+    copyText(r.url, function(){
+      b.textContent = "済";
+      setTimeout(function(){ b.textContent = "コピー"; }, 1400);
+    });
+  });
+
+  el("bulkCopyBtn").addEventListener("click", function(){
+    if(!lastBulk.length){ showToast("先に一覧を生成してください"); return; }
+    var tsv = lastBulk.map(function(r){ return r.label + "\t" + r.url; }).join("\n");
+    copyText(tsv, function(){ showToast(lastBulk.length + "件をコピーしました"); });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
