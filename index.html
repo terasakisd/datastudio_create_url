@@ -62,10 +62,6 @@
     font-size: 13px;
     line-height: 1.7;
     color: var(--muted);
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 10px 12px;
   }
   .howto ol {
     margin: 0; padding: 0;
@@ -302,7 +298,7 @@
           <input type="text" id="site" placeholder="https://example.co.jp/" spellcheck="false">
         </div>
       </div>
-      <div class="field">
+      <div class="field" hidden>
         <label for="reportName">レポート名</label>
         <input type="text" id="reportName" value="クエリ前後比較「{site}」" spellcheck="false">
       </div>
